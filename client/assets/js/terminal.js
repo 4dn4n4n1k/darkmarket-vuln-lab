@@ -17,8 +17,13 @@ const COMMANDS = {
   dump:       { desc: 'Hints about DB dumping (Flag 1)',    handler: cmdDump      },
   history:    { desc: 'Show command history',               handler: cmdHistory   },
   clear:      { desc: 'Clear the terminal',                 handler: cmdClear     },
-  // Add new commands below:
-  // myCmd: { desc: 'Description', handler: cmdMyCmd },
+  pwd:        { desc: 'Print working directory',            handler: cmdPwd       },
+  date:       { desc: 'Show current system date and time',  handler: cmdDate      },
+  uname:      { desc: 'Print system information',           handler: cmdUname     },
+  ping:       { desc: 'Send ICMP ECHO_REQUEST to network hosts', handler: cmdPing },
+  cat:        { desc: 'Concatenate files and print on the standard output', handler: cmdCat },
+  echo:       { desc: 'Display a line of text',             handler: cmdEcho      },
+  ps:         { desc: 'Report a snapshot of the current processes', handler: cmdPs },
 };
 
 function printLine(text, cls = 'out') {
@@ -202,6 +207,70 @@ function cmdHistory() {
 function cmdClear() {
   const out = document.getElementById('terminal-output');
   if (out) out.innerHTML = '';
+}
+
+function cmdPwd() {
+  printLine('/home/dm-user/workspace', 'out');
+  printBlank();
+}
+
+function cmdDate() {
+  printLine(new Date().toString(), 'out');
+  printBlank();
+}
+
+function cmdUname(args) {
+  if (args.includes('-a')) {
+    printLine('Linux darkmarket-node 6.5.0-generic #1 SMP PREEMPT_DYNAMIC x86_64 GNU/Linux', 'out');
+  } else {
+    printLine('Linux', 'out');
+  }
+  printBlank();
+}
+
+async function cmdPing(args) {
+  const host = args[0] || 'localhost';
+  printLine(`PING ${host} (${host}): 56 data bytes`, 'out');
+  // simulate a few pings with a slight delay
+  for (let i = 1; i <= 3; i++) {
+    await new Promise(r => setTimeout(r, 600));
+    printLine(`64 bytes from ${host}: icmp_seq=${i} ttl=64 time=${(Math.random()*10).toFixed(2)} ms`, 'out');
+  }
+  printBlank();
+}
+
+function cmdEcho(args) {
+  printLine(args.join(' '), 'out');
+  printBlank();
+}
+
+function cmdPs() {
+  printLine('  PID TTY          TIME CMD', 'out');
+  printLine(' 1337 pts/0    00:00:00 bash', 'out');
+  printLine(' 1338 pts/0    00:00:02 node server/app.js', 'out');
+  printLine(' 1492 pts/0    00:00:00 ps', 'out');
+  printBlank();
+}
+
+function cmdCat(args) {
+  if (!args.length) {
+    printLine('cat: missing operand', 'err');
+    printBlank();
+    return;
+  }
+  const file = args[0];
+  if (file === '/etc/passwd') {
+    printLine('root:x:0:0:root:/root:/bin/bash', 'out');
+    printLine('daemon:x:1:1:daemon:/usr/sbin:/usr/sbin/nologin', 'out');
+    printLine('dm-user:x:1000:1000:DarkMarket User,,,:/home/dm-user:/bin/bash', 'out');
+  } else if (file === '.env') {
+    printLine('cat: .env: Permission denied. (Hint: Try Path Traversal vulnerability on the web server)', 'err');
+  } else if (file === 'readme.txt') {
+    printLine('Welcome to DarkMarket Simulator.', 'out');
+  } else {
+    printLine(`cat: ${file}: No such file or directory`, 'err');
+  }
+  printBlank();
 }
 
 // ── Input Handler ─────────────────────────────────────────────────────────────
