@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Scoreboard | DarkMarket</title>
+  <meta name="description" content="DarkMarket CTF scoreboard — live leaderboard updated in real-time.">
+  <link rel="stylesheet" href="/assets/css/dark-theme.css">
+  <style>
+    .scoreboard-layout {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+
+    .top-three {
+      display: grid;
+      grid-template-columns: 1fr 1.2fr 1fr;
+      gap: 16px;
+      margin-bottom: 32px;
+      align-items: end;
+    }
+
+    .podium-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 20px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .podium-card.rank-1 {
+      border-color: var(--accent-amber);
+      box-shadow: 0 0 20px rgba(255,176,0,0.15);
+    }
+
+    .podium-card.rank-2 {
+      border-color: rgba(148,163,184,0.3);
+    }
+
+    .podium-card.rank-3 {
+      border-color: rgba(205,127,50,0.3);
+    }
+
+    .podium-rank {
+      font-size: 28px;
+      margin-bottom: 8px;
+    }
+
+    .podium-username {
+      font-family: var(--font-mono);
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 6px;
+    }
+
+    .podium-pts {
+      font-family: var(--font-mono);
+      font-size: 20px;
+      font-weight: 900;
+      color: var(--accent-green);
+    }
+
+    .podium-flags {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 4px;
+      font-family: var(--font-mono);
+    }
+
+    /* Leaderboard table */
+    .leaderboard-wrap {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+    }
+
+    .leaderboard-header {
+      display: grid;
+      grid-template-columns: 50px 1fr 120px 80px 80px;
+      padding: 10px 20px;
+      font-size: 10px;
+      font-weight: 700;
+      font-family: var(--font-mono);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .leaderboard-row {
+      display: grid;
+      grid-template-columns: 50px 1fr 120px 80px 80px;
+      padding: 14px 20px;
+      border-bottom: 1px solid var(--border-subtle);
+      align-items: center;
+      transition: all var(--transition);
+    }
+
+    .leaderboard-row:last-child { border-bottom: none; }
+
+    .leaderboard-row:hover {
+      background: rgba(0,255,65,0.02);
+    }
+
+    .leaderboard-row.me {
+      background: rgba(0,255,65,0.04);
+      border-left: 2px solid var(--accent-green);
+    }
+
+    .lb-rank {
+      font-family: var(--font-mono);
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text-muted);
+    }
+
+    .lb-rank.gold   { color: var(--accent-amber); }
+    .lb-rank.silver { color: #94a3b8; }
+    .lb-rank.bronze { color: #cd7f32; }
+
+    .lb-username {
+      font-family: var(--font-mono);
+      font-size: 13px;
+      color: var(--text-primary);
+    }
+
+    .lb-pts {
+      font-family: var(--font-mono);
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--accent-green);
+    }
+
+    .lb-flags {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--text-muted);
+      text-align: center;
+    }
+
+    .lb-bar-wrap {
+      height: 4px;
+      background: var(--border);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .lb-bar {
+      height: 100%;
+      background: var(--accent-green);
+      border-radius: 2px;
+      transition: width 0.8s ease;
+    }
+
+    /* Live indicator */
+    .live-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      font-family: var(--font-mono);
+      color: var(--accent-green);
+      background: var(--accent-green-glow);
+      border: 1px solid var(--border);
+      padding: 4px 10px;
+      border-radius: 999px;
+    }
+
+    .live-dot {
+      width: 6px;
+      height: 6px;
+      background: var(--accent-green);
+      border-radius: 50%;
+      animation: pulse-dot 1.5s ease-in-out infinite;
+    }
+
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.8); }
+    }
+
+    /* Live feed */
+    .live-feed {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 20px;
+      margin-top: 24px;
+    }
+
+    .live-event {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 12px;
+      border-radius: var(--radius);
+      background: rgba(0,255,65,0.04);
+      border: 1px solid var(--border);
+      margin-bottom: 8px;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      animation: fadeIn 0.4s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .live-event-icon { color: var(--accent-green); font-size: 14px; }
+    .live-event-text { color: var(--text-secondary); }
+    .live-event-text strong { color: var(--accent-green); }
+    .live-event-time { margin-left: auto; color: var(--text-dim); font-size: 10px; }
+
+    .empty-leaderboard {
+      text-align: center;
+      padding: 48px;
+      font-family: var(--font-mono);
+      color: var(--text-muted);
+    }
+  </style>
+</head>
+<body class="dm-body">
+
+  <nav class="dm-nav">
+    <a href="/market" class="dm-nav-brand">◈ DARKMARKET</a>
+    <div class="dm-nav-links">
+      <a href="/market" class="dm-nav-item">Market</a>
+      <a href="/my-orders" class="dm-nav-item">Orders</a>
+      <a href="/scoreboard" class="dm-nav-item active">Scoreboard</a>
+      <a href="/dashboard" class="dm-nav-item">Dashboard</a>
+    </div>
+    <div class="dm-nav-actions">
+      <span class="dm-nav-user" id="nav-user">Loading...</span>
+    </div>
+  </nav>
+
+  <main class="dm-main">
+    <div class="dm-container">
+      <div class="scoreboard-layout">
+
+        <div class="dm-page-header" style="display:flex;justify-content:space-between;align-items:center;">
+          <div>
+            <h1 class="dm-page-title">🏆 <span>Scoreboard</span></h1>
+            <p class="dm-page-subtitle">// Global CTF leaderboard — updated in real-time</p>
+          </div>
+          <span class="live-badge"><span class="live-dot"></span> LIVE</span>
+        </div>
+
+        <!-- Top 3 Podium -->
+        <div class="top-three" id="podium">
+          <div class="dm-skeleton" style="height:140px;border-radius:14px;"></div>
+          <div class="dm-skeleton" style="height:160px;border-radius:14px;"></div>
+          <div class="dm-skeleton" style="height:140px;border-radius:14px;"></div>
+        </div>
+
+        <!-- Full Leaderboard -->
+        <div class="leaderboard-wrap" id="leaderboard">
+          <div class="leaderboard-header">
+            <span>Rank</span><span>Player</span><span>Points</span><span style="text-align:center;">Flags</span><span>Progress</span>
+          </div>
+          <div id="leaderboard-rows">
+            <div style="height:50px;" class="dm-skeleton" style="margin:8px;border-radius:6px;"></div>
+          </div>
+        </div>
+
+        <!-- Live Feed -->
+        <div class="live-feed">
+          <div class="dm-section-title">Live Events</div>
+          <div id="live-events">
+            <div style="font-family:var(--font-mono);font-size:12px;color:var(--text-dim);">Waiting for flag captures...</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </main>
+
+  <script src="/assets/js/scoreboard.js"></script>
+  <script>
+    const MAX_LIVE = 10;
+
+    async function loadUser() {
+      const res = await fetch('/auth/me');
+      const data = await res.json();
+      if (data.success) {
+        document.getElementById('nav-user').textContent = `// ${data.data.username}`;
+        window.currentUser = data.data;
+      }
+    }
+
+    async function loadScoreboard() {
+      const res = await fetch('/score');
+      const data = await res.json();
+      if (!data.success) return;
+
+      const rows = data.data;
+      const maxPts = rows[0]?.points || 1;
+
+      // Podium
+      const podiumEl = document.getElementById('podium');
+      const top3 = [rows[1], rows[0], rows[2]]; // 2nd, 1st, 3rd
+      const medals = ['🥈', '🥇', '🥉'];
+      const rankCls = ['rank-2', 'rank-1', 'rank-3'];
+
+      podiumEl.innerHTML = top3.map((r, i) => {
+        if (!r) return `<div class="podium-card"><div style="color:var(--text-dim);font-family:var(--font-mono);font-size:12px;">—</div></div>`;
+        return `
+          <div class="podium-card ${rankCls[i]}">
+            <div class="podium-rank">${medals[i]}</div>
+            <div class="podium-username">@${escHtml(r.username)}</div>
+            <div class="podium-pts">${r.points}</div>
+            <div class="podium-flags">${r.flags_captured}/6 flags</div>
+          </div>
+        `;
+      }).join('');
+
+      // Full table
+      document.getElementById('leaderboard-rows').innerHTML = rows.length
+        ? rows.map(r => {
+            const pct = Math.round((r.points / maxPts) * 100);
+            const rankCls = r.rank === 1 ? 'gold' : r.rank === 2 ? 'silver' : r.rank === 3 ? 'bronze' : '';
+            const isMe = window.currentUser?.username === r.username;
+            return `
+              <div class="leaderboard-row ${isMe ? 'me' : ''}">
+                <span class="lb-rank ${rankCls}">#${r.rank}</span>
+                <span class="lb-username">${isMe ? '→ ' : ''}@${escHtml(r.username)}</span>
+                <span class="lb-pts">${r.points} pts</span>
+                <span class="lb-flags">${r.flags_captured}/6</span>
+                <div class="lb-bar-wrap"><div class="lb-bar" style="width:${pct}%"></div></div>
+              </div>
+            `;
+          }).join('')
+        : `<div class="empty-leaderboard">No flags captured yet. Be the first!</div>`;
+    }
+
+    function addLiveEvent(evt) {
+      const feed = document.getElementById('live-events');
+      const placeholder = feed.querySelector('[style*="color:var(--text-dim)"]');
+      if (placeholder) placeholder.remove();
+
+      const el = document.createElement('div');
+      el.className = 'live-event';
+      el.innerHTML = `
+        <span class="live-event-icon">🏴</span>
+        <span class="live-event-text"><strong>@${escHtml(evt.user)}</strong> captured <strong>${escHtml(evt.flag)}</strong> (+${evt.points} pts)</span>
+        <span class="live-event-time">${new Date(evt.timestamp).toLocaleTimeString()}</span>
+      `;
+      feed.insertBefore(el, feed.firstChild);
+
+      const events = feed.querySelectorAll('.live-event');
+      if (events.length > MAX_LIVE) events[events.length - 1].remove();
+
+      // Reload scoreboard
+      loadScoreboard();
+    }
+
+    function escHtml(s) { return s ? s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') : ''; }
+
+    loadUser().then(loadScoreboard);
+    initScoreboard(addLiveEvent);
+  </script>
+</body>
+</html>

@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Orders | DarkMarket</title>
+  <meta name="description" content="View your DarkMarket orders. Try changing the order ID.">
+  <link rel="stylesheet" href="/assets/css/dark-theme.css">
+  <link rel="stylesheet" href="/assets/css/terminal.css">
+  <style>
+    .order-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+
+    .order-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 20px;
+      transition: all var(--transition);
+    }
+
+    .order-card:hover {
+      border-color: var(--border-hover);
+    }
+
+    .order-id {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+
+    .order-listing-title {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 10px;
+    }
+
+    .order-status {
+      display: inline-block;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-family: var(--font-mono);
+    }
+
+    .status-pending   { background: rgba(255,176,0,0.1); color: var(--accent-amber); border: 1px solid rgba(255,176,0,0.2); }
+    .status-delivered { background: rgba(0,255,65,0.1);  color: var(--accent-green); border: 1px solid var(--border); }
+    .status-completed { background: rgba(0,128,255,0.1); color: var(--accent-blue);  border: 1px solid rgba(0,128,255,0.2); }
+    .status-disputed  { background: rgba(255,49,49,0.1); color: var(--accent-red);   border: 1px solid rgba(255,49,49,0.2); }
+
+    /* IDOR probe section */
+    .idor-probe {
+      background: var(--bg-card);
+      border: 1px solid rgba(255,49,49,0.2);
+      border-radius: var(--radius-lg);
+      padding: 24px;
+      margin-bottom: 32px;
+    }
+
+    .idor-probe-title {
+      font-family: var(--font-mono);
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--accent-red);
+      margin-bottom: 12px;
+    }
+
+    .idor-input-row {
+      display: flex;
+      gap: 10px;
+    }
+
+    #probe-result {
+      margin-top: 16px;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      padding: 14px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      display: none;
+      white-space: pre-wrap;
+      word-break: break-all;
+      line-height: 1.8;
+    }
+
+    #flag-idor {
+      margin-top: 12px;
+      padding: 12px 14px;
+      background: rgba(0,255,65,0.08);
+      border: 1px solid var(--accent-green);
+      border-radius: var(--radius);
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--accent-green);
+      display: none;
+      word-break: break-all;
+    }
+
+    #flag-idor strong { display: block; font-size: 10px; color: var(--text-muted); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.1em; }
+  </style>
+</head>
+<body class="dm-body">
+
+  <nav class="dm-nav">
+    <a href="/market" class="dm-nav-brand">◈ DARKMARKET</a>
+    <div class="dm-nav-links">
+      <a href="/market" class="dm-nav-item">Market</a>
+      <a href="/my-orders" class="dm-nav-item active">Orders</a>
+      <a href="/scoreboard" class="dm-nav-item">Scoreboard</a>
+      <a href="/dashboard" class="dm-nav-item">Dashboard</a>
+    </div>
+    <div class="dm-nav-actions">
+      <span class="dm-nav-user" id="nav-user">Loading...</span>
+      <button class="dm-hacker-btn" id="hacker-toggle">⚡ Hacker Mode</button>
+    </div>
+  </nav>
+
+  <main class="dm-main">
+    <div class="dm-container">
+      <div class="dm-page-header">
+        <h1 class="dm-page-title">My <span>Orders</span></h1>
+        <p class="dm-page-subtitle">// Your purchase history</p>
+      </div>
+
+      <!-- IDOR Probe -->
+      <div class="idor-probe">
+        <div class="idor-probe-title">⚠ Order Lookup — /orders/:id</div>
+        <p style="font-size:13px;color:var(--text-muted);margin-bottom:14px;font-family:var(--font-mono);">
+          No ownership validation on this endpoint. Any authenticated user can read any order by ID.
+        </p>
+        <div class="idor-input-row">
+          <input class="dm-input" type="number" id="probe-id" placeholder="Order ID (try 1–20)" style="max-width:200px;">
+          <button class="dm-btn dm-btn-danger" onclick="probeOrder()">Fetch Order</button>
+        </div>
+        <div id="probe-result"></div>
+        <div id="flag-idor"><strong>🏴 Flag 4 Captured!</strong><span id="flag-idor-token"></span></div>
+      </div>
+
+      <!-- My Orders -->
+      <div class="dm-section-title">Your Orders</div>
+      <div class="order-grid" id="orders-grid">
+        <div class="dm-card"><div class="dm-skeleton" style="height:100px;border-radius:8px;"></div></div>
+        <div class="dm-card"><div class="dm-skeleton" style="height:100px;border-radius:8px;"></div></div>
+      </div>
+    </div>
+  </main>
+
+  <!-- HACKER PANEL -->
+  <div id="hacker-panel" class="hacker-panel hidden">
+    <div class="hacker-panel-header">
+      <span class="hacker-panel-title">DARKMARKET TERMINAL</span>
+      <button class="hacker-panel-close" onclick="closeHacker()">✕</button>
+    </div>
+    <div class="hacker-hints" id="hint-box">
+      <div class="hacker-hints-label">Page Hints</div>
+      <div id="hint-list"></div>
+    </div>
+    <div class="terminal-output" id="terminal-output"></div>
+    <div class="terminal-input-row">
+      <span class="terminal-prompt">dm@orders $&nbsp;</span>
+      <input class="terminal-input" id="terminal-input" type="text" placeholder="type 'help'..." autocomplete="off">
+    </div>
+  </div>
+
+  <script src="/assets/js/hacker-mode.js"></script>
+  <script src="/assets/js/terminal.js"></script>
+  <script>
+    async function loadUser() {
+      const res = await fetch('/auth/me');
+      const data = await res.json();
+      if (!data.success) { window.location.href = '/login'; return; }
+      document.getElementById('nav-user').textContent = `// ${data.data.username}`;
+      window.currentUser = data.data;
+    }
+
+    async function loadOrders() {
+      const res = await fetch('/orders');
+      const data = await res.json();
+      const grid = document.getElementById('orders-grid');
+
+      if (!data.data.length) {
+        grid.innerHTML = '<div style="color:var(--text-muted);font-size:13px;font-family:var(--font-mono);">No orders yet. Browse the market.</div>';
+        return;
+      }
+
+      grid.innerHTML = data.data.map(o => `
+        <div class="order-card">
+          <div class="order-id">Order #${o.id}</div>
+          <div class="order-listing-title">${escHtml(o.listing_title || 'Unknown Listing')}</div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;">
+            <span class="order-status status-${o.status}">${o.status}</span>
+            <span style="font-family:var(--font-mono);font-size:13px;color:var(--accent-green);">₿ ${parseFloat(o.amount_btc).toFixed(4)}</span>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    async function probeOrder() {
+      const id = document.getElementById('probe-id').value;
+      if (!id) return;
+
+      const res = await fetch('/orders/' + id);
+      const data = await res.json();
+      const resultEl = document.getElementById('probe-result');
+      const flagEl   = document.getElementById('flag-idor');
+
+      resultEl.style.display = 'block';
+
+      if (data.success) {
+        const d = data.data;
+        resultEl.style.color = 'var(--text-secondary)';
+        resultEl.textContent = JSON.stringify(d, null, 2);
+
+        if (data.flag) {
+          document.getElementById('flag-idor-token').textContent = data.flag;
+          flagEl.style.display = 'block';
+          showFlagToast('Flag 4 — IDOR', data.flag);
+        } else {
+          flagEl.style.display = 'none';
+        }
+      } else {
+        resultEl.style.color = 'var(--accent-red)';
+        resultEl.textContent = data.message || 'Error.';
+        flagEl.style.display = 'none';
+      }
+    }
+
+    function showFlagToast(name, token) {
+      const toast = document.createElement('div');
+      toast.className = 'dm-flag-toast';
+      toast.innerHTML = `<div class="dm-flag-toast-title">🏴 ${name} Captured!</div><div class="dm-flag-toast-token">${token}</div>`;
+      document.body.appendChild(toast);
+      setTimeout(() => toast.remove(), 6000);
+    }
+
+    function escHtml(s) { return s ? s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') : ''; }
+
+    loadUser().then(() => loadOrders());
+    initHackerMode('orders');
+  </script>
+</body>
+</html>

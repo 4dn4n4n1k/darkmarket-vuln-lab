@@ -1,0 +1,26 @@
+{
+  "name": "dark-market-sim",
+  "version": "1.0.0",
+  "description": "Educational CTF-style intentionally vulnerable marketplace",
+  "main": "server/app.js",
+  "scripts": {
+    "start": "node server/app.js",
+    "dev": "nodemon server/app.js",
+    "db:seed": "node server/db/seed.js",
+    "db:reset": "node -e \"const fs=require('fs');try{fs.unlinkSync('server/db/market.sqlite')}catch(e){}\" && node server/db/seed.js",
+    "test": "echo \"No automated tests — manual CTF testing\""
+  },
+  "dependencies": {
+    "better-sqlite3": "^12.9.0",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "express-session": "^1.19.0",
+    "jsonwebtoken": "^9.0.3",
+    "node-fetch": "^3.3.2",
+    "winston": "^3.19.0",
+    "ws": "^8.20.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.14"
+  }
+}

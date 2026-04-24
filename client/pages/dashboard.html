@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard | DarkMarket</title>
+  <meta name="description" content="DarkMarket admin dashboard — attack log analytics and heatmaps.">
+  <link rel="stylesheet" href="/assets/css/dark-theme.css">
+  <style>
+    .jwt-gate {
+      max-width: 560px;
+      margin: 60px auto;
+    }
+
+    .jwt-info {
+      background: rgba(255,176,0,0.06);
+      border: 1px solid rgba(255,176,0,0.2);
+      border-radius: var(--radius);
+      padding: 14px 16px;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--accent-amber);
+      margin-bottom: 20px;
+      line-height: 1.7;
+    }
+
+    .jwt-info code {
+      background: rgba(0,0,0,0.4);
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-size: 11px;
+      color: var(--text-secondary);
+      word-break: break-all;
+    }
+
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+
+    /* Heatmap */
+    .heatmap-wrap {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 24px;
+      margin-bottom: 24px;
+    }
+
+    .heatmap-bar-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+
+    .heatmap-label {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--text-muted);
+      width: 160px;
+      flex-shrink: 0;
+    }
+
+    .heatmap-bar-bg {
+      flex: 1;
+      height: 20px;
+      background: var(--bg-secondary);
+      border-radius: 4px;
+      overflow: hidden;
+      border: 1px solid var(--border-subtle);
+    }
+
+    .heatmap-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent-green-dim), var(--accent-green));
+      border-radius: 4px;
+      transition: width 1s ease;
+      display: flex;
+      align-items: center;
+      padding-right: 8px;
+      justify-content: flex-end;
+    }
+
+    .heatmap-count {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--text-muted);
+      width: 40px;
+      text-align: right;
+      flex-shrink: 0;
+    }
+
+    /* Pattern chart */
+    .pattern-chart {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .pattern-pill {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 14px;
+      border-radius: var(--radius);
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+    }
+
+    .pattern-dot { width: 8px; height: 8px; border-radius: 50%; }
+    .pattern-name { font-family: var(--font-mono); font-size: 12px; color: var(--text-secondary); }
+    .pattern-count { font-family: var(--font-mono); font-size: 14px; font-weight: 700; color: var(--text-primary); }
+
+    /* Log table */
+    .log-filters {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+
+    .log-table-wrap {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+    }
+
+    .log-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+
+    .log-table th {
+      background: var(--bg-secondary);
+      padding: 10px 14px;
+      text-align: left;
+      font-size: 10px;
+      font-weight: 700;
+      font-family: var(--font-mono);
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .log-table td {
+      padding: 10px 14px;
+      font-family: var(--font-mono);
+      color: var(--text-secondary);
+      border-bottom: 1px solid var(--border-subtle);
+      max-width: 200px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .log-table tr:hover td { background: rgba(0,255,65,0.02); }
+
+    .pattern-tag {
+      display: inline-block;
+      padding: 2px 7px;
+      border-radius: 4px;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .tag-sqli     { background: rgba(255,49,49,0.12);  color: var(--accent-red); }
+    .tag-xss      { background: rgba(255,176,0,0.12);  color: var(--accent-amber); }
+    .tag-traversal{ background: rgba(139,92,246,0.12); color: var(--accent-purple); }
+    .tag-ssrf     { background: rgba(0,128,255,0.12);  color: var(--accent-blue); }
+    .tag-jwt      { background: rgba(0,255,65,0.08);   color: var(--accent-green); }
+
+    #dashboard-content { display: none; }
+  </style>
+</head>
+<body class="dm-body">
+
+  <nav class="dm-nav">
+    <a href="/market" class="dm-nav-brand">◈ DARKMARKET</a>
+    <div class="dm-nav-links">
+      <a href="/market" class="dm-nav-item">Market</a>
+      <a href="/my-orders" class="dm-nav-item">Orders</a>
+      <a href="/scoreboard" class="dm-nav-item">Scoreboard</a>
+      <a href="/dashboard" class="dm-nav-item active">Dashboard</a>
+    </div>
+    <div class="dm-nav-actions">
+      <span class="dm-nav-user" id="nav-user">—</span>
+    </div>
+  </nav>
+
+  <main class="dm-main">
+    <div class="dm-container">
+
+      <!-- JWT Gate -->
+      <div id="jwt-gate" class="jwt-gate">
+        <div class="dm-page-header">
+          <h1 class="dm-page-title">Admin <span>Dashboard</span></h1>
+          <p class="dm-page-subtitle">// JWT required — Flag 2 vulnerability</p>
+        </div>
+
+        <div class="jwt-info">
+          <strong style="display:block;margin-bottom:6px;">⚠ CTF Note — Flag 2: Token Heist</strong>
+          This endpoint requires a JWT. The secret is <code>supersecret</code> (weak by design).<br><br>
+          Forge a token:<br>
+          <code>node -e "console.log(require('jsonwebtoken').sign({id:1,role:'admin'},'supersecret'))"</code>
+        </div>
+
+        <div class="dm-form-group">
+          <label class="dm-label" for="jwt-input">JWT Token</label>
+          <input class="dm-input" type="text" id="jwt-input" placeholder="Paste your JWT here..." style="font-family:var(--font-mono);font-size:12px;">
+        </div>
+        <button class="dm-btn dm-btn-primary" onclick="submitJwt()">Access Dashboard</button>
+        <div id="jwt-error" style="margin-top:12px;color:var(--accent-red);font-family:var(--font-mono);font-size:12px;display:none;"></div>
+        <div id="jwt-flag" style="margin-top:12px;padding:12px;background:rgba(0,255,65,0.08);border:1px solid var(--accent-green);border-radius:var(--radius);font-family:var(--font-mono);font-size:12px;color:var(--accent-green);display:none;word-break:break-all;">
+          <strong style="display:block;font-size:10px;color:var(--text-muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:0.1em;">🏴 Flag 2 Captured!</strong>
+          <span id="jwt-flag-token"></span>
+        </div>
+      </div>
+
+      <!-- Dashboard -->
+      <div id="dashboard-content">
+        <div class="dm-page-header" style="display:flex;justify-content:space-between;align-items:center;">
+          <div>
+            <h1 class="dm-page-title">Admin <span>Dashboard</span></h1>
+            <p class="dm-page-subtitle">// Attack analytics &amp; log viewer</p>
+          </div>
+          <div style="display:flex;gap:10px;">
+            <button class="dm-btn dm-btn-outline dm-btn-sm" onclick="exportLogs('json')">Export JSON</button>
+            <button class="dm-btn dm-btn-outline dm-btn-sm" onclick="exportLogs('csv')">Export CSV</button>
+          </div>
+        </div>
+
+        <!-- Stats -->
+        <div class="dashboard-grid" id="dash-stats">
+          <div class="dm-stat"><div class="dm-stat-value" id="d-users">—</div><div class="dm-stat-label">Total Users</div></div>
+          <div class="dm-stat"><div class="dm-stat-value" id="d-orders">—</div><div class="dm-stat-label">Orders</div></div>
+          <div class="dm-stat"><div class="dm-stat-value" id="d-logs">—</div><div class="dm-stat-label">Attacks Today</div></div>
+          <div class="dm-stat"><div class="dm-stat-value" id="d-endpoint" style="font-size:14px;"></div><div class="dm-stat-label">Top Target</div></div>
+        </div>
+
+        <!-- Heatmap -->
+        <div class="heatmap-wrap">
+          <div class="dm-section-title">Endpoint Heatmap</div>
+          <div id="heatmap-bars"></div>
+        </div>
+
+        <!-- Pattern breakdown -->
+        <div class="dm-card" style="margin-bottom:24px;">
+          <div class="dm-section-title">Attack Patterns</div>
+          <div class="pattern-chart" id="pattern-chart"></div>
+        </div>
+
+        <!-- Log table -->
+        <div>
+          <div class="log-filters">
+            <div class="dm-section-title" style="margin:0;">Attack Logs</div>
+            <select class="dm-input" id="filter-pattern" style="width:140px;" onchange="loadLogs()">
+              <option value="">All Patterns</option>
+              <option value="sqli">SQLi</option>
+              <option value="xss">XSS</option>
+              <option value="traversal">Traversal</option>
+              <option value="ssrf">SSRF</option>
+              <option value="jwt">JWT</option>
+            </select>
+            <button class="dm-btn dm-btn-outline dm-btn-sm" onclick="loadLogs()">Refresh</button>
+          </div>
+          <div class="log-table-wrap">
+            <table class="log-table">
+              <thead>
+                <tr>
+                  <th>Time</th>
+                  <th>IP</th>
+                  <th>Method</th>
+                  <th>Endpoint</th>
+                  <th>Pattern</th>
+                  <th>Payload</th>
+                </tr>
+              </thead>
+              <tbody id="log-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    let adminToken = null;
+
+    // Pre-fill token from localStorage
+    const storedToken = localStorage.getItem('dm_token');
+    if (storedToken) document.getElementById('jwt-input').value = storedToken;
+
+    async function loadUser() {
+      const res = await fetch('/auth/me');
+      const data = await res.json();
+      if (data.success) document.getElementById('nav-user').textContent = `// ${data.data.username}`;
+    }
+
+    async function submitJwt() {
+      const token = document.getElementById('jwt-input').value.trim();
+      if (!token) return;
+
+      const res = await fetch('/admin', {
+        headers: { 'Authorization': 'Bearer ' + token },
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        adminToken = token;
+        localStorage.setItem('dm_token', token);
+
+        if (data.flag) {
+          document.getElementById('jwt-flag-token').textContent = data.flag;
+          document.getElementById('jwt-flag').style.display = 'block';
+          showFlagToast('Flag 2 — Token Heist', data.flag);
+          await new Promise(r => setTimeout(r, 2000));
+        }
+
+        // Fill stats
+        document.getElementById('d-users').textContent    = data.data.total_users;
+        document.getElementById('d-orders').textContent   = data.data.total_orders;
+        document.getElementById('d-logs').textContent     = data.data.attack_logs_today;
+        document.getElementById('d-endpoint').textContent = data.data.top_targeted_endpoint;
+
+        document.getElementById('jwt-gate').style.display = 'none';
+        document.getElementById('dashboard-content').style.display = 'block';
+
+        loadLogs();
+        loadHeatmap();
+      } else {
+        document.getElementById('jwt-error').textContent = '✗ ' + (data.message || 'Invalid JWT.');
+        document.getElementById('jwt-error').style.display = 'block';
+      }
+    }
+
+    async function loadLogs() {
+      if (!adminToken) return;
+      const pattern = document.getElementById('filter-pattern').value;
+      const params = new URLSearchParams({ limit: 50 });
+      if (pattern) params.set('pattern', pattern);
+
+      const res  = await fetch('/admin/logs?' + params, { headers: { 'Authorization': 'Bearer ' + adminToken } });
+      const data = await res.json();
+
+      const COLORS = { sqli: 'tag-sqli', xss: 'tag-xss', traversal: 'tag-traversal', ssrf: 'tag-ssrf', jwt: 'tag-jwt' };
+
+      document.getElementById('log-tbody').innerHTML = data.data?.length
+        ? data.data.map(l => `
+            <tr>
+              <td>${new Date(l.timestamp).toLocaleString()}</td>
+              <td>${escHtml(l.ip_address)}</td>
+              <td style="color:var(--accent-amber)">${l.method}</td>
+              <td style="color:var(--accent-green)">${escHtml(l.endpoint)}</td>
+              <td>${l.pattern_matched ? `<span class="pattern-tag ${COLORS[l.pattern_matched]||''}">${l.pattern_matched}</span>` : '<span style="color:var(--text-dim)">—</span>'}</td>
+              <td title="${escHtml(l.payload||'')}">${escHtml((l.payload||'').substring(0,50))}</td>
+            </tr>
+          `).join('')
+        : '<tr><td colspan="6" style="text-align:center;color:var(--text-dim);padding:32px;">No logs found.</td></tr>';
+    }
+
+    async function loadHeatmap() {
+      if (!adminToken) return;
+      const res  = await fetch('/admin/logs?limit=500', { headers: { 'Authorization': 'Bearer ' + adminToken } });
+      const data = await res.json();
+      if (!data.data) return;
+
+      // Count by endpoint
+      const endpointCounts = {};
+      const patternCounts  = {};
+      for (const l of data.data) {
+        endpointCounts[l.endpoint] = (endpointCounts[l.endpoint] || 0) + 1;
+        if (l.pattern_matched) patternCounts[l.pattern_matched] = (patternCounts[l.pattern_matched] || 0) + 1;
+      }
+
+      // Heatmap bars
+      const sorted = Object.entries(endpointCounts).sort((a,b)=>b[1]-a[1]).slice(0,8);
+      const maxCount = sorted[0]?.[1] || 1;
+      document.getElementById('heatmap-bars').innerHTML = sorted.map(([ep, cnt]) => `
+        <div class="heatmap-bar-row">
+          <span class="heatmap-label">${escHtml(ep)}</span>
+          <div class="heatmap-bar-bg">
+            <div class="heatmap-bar-fill" style="width:${Math.round((cnt/maxCount)*100)}%"></div>
+          </div>
+          <span class="heatmap-count">${cnt}</span>
+        </div>
+      `).join('') || '<span style="color:var(--text-dim);font-size:13px;font-family:var(--font-mono);">No attack data yet.</span>';
+
+      // Pattern chart
+      const PATTERN_COLORS = { sqli:'#ff3131', xss:'#ffb000', traversal:'#8b5cf6', ssrf:'#0080ff', jwt:'#00ff41' };
+      document.getElementById('pattern-chart').innerHTML = Object.entries(patternCounts).map(([p,c]) => `
+        <div class="pattern-pill">
+          <div class="pattern-dot" style="background:${PATTERN_COLORS[p]||'#666'}"></div>
+          <span class="pattern-name">${p}</span>
+          <span class="pattern-count">${c}</span>
+        </div>
+      `).join('') || '<span style="color:var(--text-dim);font-size:13px;font-family:var(--font-mono);">No patterns detected yet.</span>';
+    }
+
+    function exportLogs(format) {
+      if (!adminToken) return;
+      const url = `/admin/logs/export?format=${format}`;
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `attack_logs.${format}`);
+      // Need auth header — open in new tab instead
+      fetch(url, { headers: { 'Authorization': 'Bearer ' + adminToken } })
+        .then(r => format === 'csv' ? r.text() : r.json())
+        .then(data => {
+          const content = typeof data === 'string' ? data : JSON.stringify(data, null, 2);
+          const blob = new Blob([content], { type: format === 'csv' ? 'text/csv' : 'application/json' });
+          link.href = URL.createObjectURL(blob);
+          link.click();
+        });
+    }
+
+    function showFlagToast(name, token) {
+      const toast = document.createElement('div');
+      toast.className = 'dm-flag-toast';
+      toast.innerHTML = `<div class="dm-flag-toast-title">🏴 ${name} Captured!</div><div class="dm-flag-toast-token">${token}</div>`;
+      document.body.appendChild(toast);
+      setTimeout(() => toast.remove(), 6000);
+    }
+
+    function escHtml(s) { return s ? s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') : '—'; }
+
+    loadUser();
+  </script>
+</body>
+</html>

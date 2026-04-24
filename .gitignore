@@ -1,0 +1,10 @@
+node_modules/
+.env
+server/db/market.sqlite
+docs/writeups/
+*.log
+.env.example
+API_SPEC.md
+SECURITY_NOTES.md
+SKILL.md
+CTF_CHALLENGE.md

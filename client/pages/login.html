@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login | DarkMarket</title>
+  <meta name="description" content="Sign in to DarkMarket — the CTF security training marketplace.">
+  <link rel="stylesheet" href="/assets/css/dark-theme.css">
+  <style>
+    .login-wrap {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 32px 16px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .login-box {
+      width: 100%;
+      max-width: 420px;
+    }
+
+    .login-logo {
+      text-align: center;
+      margin-bottom: 36px;
+    }
+
+    .login-logo-mark {
+      font-family: var(--font-mono);
+      font-size: 36px;
+      font-weight: 900;
+      color: var(--accent-green);
+      letter-spacing: -2px;
+      text-shadow: 0 0 40px rgba(0, 255, 65, 0.5);
+      display: block;
+    }
+
+    .login-logo-sub {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--text-muted);
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+      margin-top: 4px;
+    }
+
+    .login-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 32px;
+      box-shadow: var(--shadow), var(--shadow-glow);
+    }
+
+    .login-tabs {
+      display: flex;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 28px;
+    }
+
+    .login-tab {
+      flex: 1;
+      padding: 10px;
+      text-align: center;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      color: var(--text-muted);
+      transition: all var(--transition);
+      border-bottom: 2px solid transparent;
+      margin-bottom: -1px;
+      background: none;
+      border-left: none;
+      border-right: none;
+      border-top: none;
+      font-family: var(--font-ui);
+    }
+
+    .login-tab.active {
+      color: var(--accent-green);
+      border-bottom-color: var(--accent-green);
+    }
+
+    .login-form { display: none; }
+    .login-form.active { display: block; }
+
+    .login-footer {
+      text-align: center;
+      margin-top: 20px;
+      font-size: 12px;
+      color: var(--text-muted);
+      font-family: var(--font-mono);
+    }
+
+    .warning-box {
+      background: rgba(255, 176, 0, 0.06);
+      border: 1px solid rgba(255, 176, 0, 0.2);
+      border-radius: var(--radius);
+      padding: 10px 14px;
+      font-size: 11px;
+      color: var(--accent-amber);
+      font-family: var(--font-mono);
+      margin-bottom: 24px;
+      line-height: 1.6;
+    }
+
+    .warning-box strong { display: block; margin-bottom: 2px; }
+
+    #login-error, #register-error, #register-success {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      padding: 10px 14px;
+      border-radius: var(--radius);
+      margin-bottom: 14px;
+      display: none;
+    }
+
+    #login-error, #register-error {
+      background: rgba(255,49,49,0.08);
+      border: 1px solid rgba(255,49,49,0.2);
+      color: var(--accent-red);
+    }
+
+    #register-success {
+      background: rgba(0,255,65,0.08);
+      border: 1px solid var(--border);
+      color: var(--accent-green);
+    }
+
+    .flag-reveal {
+      margin-top: 16px;
+      padding: 12px 16px;
+      background: rgba(0,255,65,0.06);
+      border: 1px solid var(--accent-green);
+      border-radius: var(--radius);
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--accent-green);
+      display: none;
+      word-break: break-all;
+    }
+
+    .flag-reveal strong { display: block; font-size: 10px; color: var(--text-muted); margin-bottom: 4px; letter-spacing: 0.1em; text-transform: uppercase; }
+  </style>
+</head>
+<body class="dm-body">
+  <div class="login-wrap">
+    <div class="login-box">
+      <div class="login-logo">
+        <span class="login-logo-mark">◈ DARKMARKET</span>
+        <span class="login-logo-sub">CTF Security Training Platform</span>
+      </div>
+
+      <div class="login-card">
+        <div class="warning-box">
+          <strong>⚠ EDUCATIONAL ENVIRONMENT</strong>
+          This is a fictional, intentionally vulnerable CTF platform. All data is fake. Do NOT use real credentials.
+        </div>
+
+        <div class="login-tabs">
+          <button class="login-tab active" id="tab-login" onclick="switchTab('login')">Sign In</button>
+          <button class="login-tab" id="tab-register" onclick="switchTab('register')">Register</button>
+        </div>
+
+        <!-- Login Form -->
+        <div class="login-form active" id="form-login">
+          <div id="login-error"></div>
+          <div class="dm-form-group">
+            <label class="dm-label" for="login-username">Username</label>
+            <input class="dm-input" type="text" id="login-username" placeholder="Enter username..." autocomplete="off" spellcheck="false">
+          </div>
+          <div class="dm-form-group">
+            <label class="dm-label" for="login-password">Password</label>
+            <input class="dm-input" type="password" id="login-password" placeholder="Enter password...">
+          </div>
+          <button class="dm-btn dm-btn-primary w-full" id="login-btn" onclick="doLogin()">
+            Access Market →
+          </button>
+          <div class="flag-reveal" id="flag-reveal-login">
+            <strong>🏴 Flag Captured!</strong>
+            <span id="flag-token-login"></span>
+          </div>
+          <div class="login-footer">
+            Demo: <code>admin / admin123</code> &nbsp;|&nbsp; Try: <code>' OR 1=1 --</code>
+          </div>
+        </div>
+
+        <!-- Register Form -->
+        <div class="login-form" id="form-register">
+          <div id="register-error"></div>
+          <div id="register-success"></div>
+          <div class="dm-form-group">
+            <label class="dm-label" for="reg-username">Username</label>
+            <input class="dm-input" type="text" id="reg-username" placeholder="Choose a handle...">
+          </div>
+          <div class="dm-form-group">
+            <label class="dm-label" for="reg-password">Password</label>
+            <input class="dm-input" type="password" id="reg-password" placeholder="Choose a password...">
+          </div>
+          <button class="dm-btn dm-btn-outline w-full" onclick="doRegister()">Create Account</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function switchTab(tab) {
+      document.querySelectorAll('.login-tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.login-form').forEach(f => f.classList.remove('active'));
+      document.getElementById('tab-' + tab).classList.add('active');
+      document.getElementById('form-' + tab).classList.add('active');
+    }
+
+    async function doLogin() {
+      const username = document.getElementById('login-username').value.trim();
+      const password = document.getElementById('login-password').value;
+      const errEl = document.getElementById('login-error');
+      const btn = document.getElementById('login-btn');
+
+      errEl.style.display = 'none';
+      btn.disabled = true;
+      btn.textContent = 'Authenticating...';
+
+      try {
+        const res = await fetch('/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password }),
+        });
+        const data = await res.json();
+
+        if (data.success) {
+          if (data.token) localStorage.setItem('dm_token', data.token);
+          if (data.flag) {
+            document.getElementById('flag-token-login').textContent = data.flag;
+            document.getElementById('flag-reveal-login').style.display = 'block';
+            setTimeout(() => { window.location.href = data.redirect || '/market'; }, 2500);
+          } else {
+            window.location.href = data.redirect || '/market';
+          }
+        } else {
+          errEl.textContent = data.message || data.error || 'Login failed.';
+          errEl.style.display = 'block';
+          btn.disabled = false;
+          btn.textContent = 'Access Market →';
+        }
+      } catch (e) {
+        errEl.textContent = 'Network error.';
+        errEl.style.display = 'block';
+        btn.disabled = false;
+        btn.textContent = 'Access Market →';
+      }
+    }
+
+    async function doRegister() {
+      const username = document.getElementById('reg-username').value.trim();
+      const password = document.getElementById('reg-password').value;
+      const errEl = document.getElementById('register-error');
+      const okEl  = document.getElementById('register-success');
+      errEl.style.display = 'none';
+      okEl.style.display = 'none';
+
+      try {
+        const res = await fetch('/auth/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password }),
+        });
+        const data = await res.json();
+
+        if (data.success) {
+          okEl.textContent = `Account created! You can now log in as "${username}".`;
+          okEl.style.display = 'block';
+          setTimeout(() => switchTab('login'), 1500);
+        } else {
+          errEl.textContent = data.message || 'Registration failed.';
+          errEl.style.display = 'block';
+        }
+      } catch {
+        errEl.textContent = 'Network error.';
+        errEl.style.display = 'block';
+      }
+    }
+
+    // Allow Enter key
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        if (document.getElementById('form-login').classList.contains('active')) doLogin();
+        else doRegister();
+      }
+    });
+  </script>
+</body>
+</html>

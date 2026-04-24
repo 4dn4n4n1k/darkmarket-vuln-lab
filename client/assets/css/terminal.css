@@ -1,0 +1,173 @@
+/* ═══════════════════════════════════════════════════════════════
+   terminal.css — Hacker Mode Terminal Panel Styles
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── Panel Layout ─────────────────────────────────────────────── */
+.hacker-panel {
+  display: flex;
+  flex-direction: column;
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+/* ── Panel Header ─────────────────────────────────────────────── */
+.hacker-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  background: rgba(0, 255, 65, 0.04);
+  flex-shrink: 0;
+}
+
+.hacker-panel-title {
+  color: var(--accent-green);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.hacker-panel-title::before {
+  content: '●';
+  color: var(--accent-green);
+  animation: blink 1s step-end infinite;
+}
+
+@keyframes blink {
+  50% { opacity: 0; }
+}
+
+.hacker-panel-close {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: all 0.15s;
+}
+
+.hacker-panel-close:hover {
+  background: rgba(255, 49, 49, 0.15);
+  color: var(--accent-red);
+}
+
+/* ── Hints Section ────────────────────────────────────────────── */
+.hacker-hints {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  max-height: 180px;
+  overflow-y: auto;
+}
+
+.hacker-hints-label {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin-bottom: 8px;
+}
+
+.hint-item {
+  display: flex;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  margin-bottom: 4px;
+  font-size: 11px;
+  line-height: 1.5;
+  border: 1px solid transparent;
+}
+
+.hint-item.severity-high {
+  background: rgba(255, 49, 49, 0.06);
+  border-color: rgba(255, 49, 49, 0.15);
+  color: #ff8a8a;
+}
+
+.hint-item.severity-med {
+  background: rgba(255, 176, 0, 0.06);
+  border-color: rgba(255, 176, 0, 0.15);
+  color: #ffd77a;
+}
+
+.hint-item.severity-low {
+  background: rgba(0, 255, 65, 0.04);
+  border-color: var(--border);
+  color: var(--text-secondary);
+}
+
+.hint-severity {
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+  padding-top: 1px;
+}
+
+.hint-item.severity-high .hint-severity { color: var(--accent-red); }
+.hint-item.severity-med .hint-severity  { color: var(--accent-amber); }
+.hint-item.severity-low .hint-severity  { color: var(--text-muted); }
+
+/* ── Terminal Output ──────────────────────────────────────────── */
+.terminal-output {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px 14px;
+  color: var(--accent-green);
+  line-height: 1.8;
+  font-size: 12px;
+}
+
+.terminal-output::-webkit-scrollbar { width: 4px; }
+.terminal-output::-webkit-scrollbar-thumb { background: var(--border); }
+
+.terminal-line { word-break: break-all; white-space: pre-wrap; }
+.terminal-line.cmd   { color: var(--accent-green); }
+.terminal-line.out   { color: var(--text-secondary); }
+.terminal-line.err   { color: var(--accent-red); }
+.terminal-line.flag  { color: var(--accent-amber); font-weight: 700; }
+.terminal-line.info  { color: var(--accent-blue); }
+.terminal-line.blank { display: block; height: 8px; }
+
+/* ── Terminal Input ───────────────────────────────────────────── */
+.terminal-input-row {
+  display: flex;
+  align-items: center;
+  padding: 10px 14px;
+  border-top: 1px solid var(--border);
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.terminal-prompt {
+  color: var(--accent-green);
+  white-space: nowrap;
+  font-weight: 700;
+  font-size: 12px;
+}
+
+.terminal-input {
+  flex: 1;
+  background: none;
+  border: none;
+  outline: none;
+  color: var(--accent-green);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  caret-color: var(--accent-green);
+}
+
+.terminal-input::placeholder {
+  color: var(--text-dim);
+}

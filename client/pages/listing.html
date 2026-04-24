@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Listing | DarkMarket</title>
+  <meta name="description" content="DarkMarket listing detail — view product, comments, and place orders.">
+  <link rel="stylesheet" href="/assets/css/dark-theme.css">
+  <link rel="stylesheet" href="/assets/css/terminal.css">
+  <style>
+    .listing-layout {
+      display: grid;
+      grid-template-columns: 1fr 340px;
+      gap: 28px;
+      align-items: start;
+    }
+
+    @media (max-width: 1024px) { .listing-layout { grid-template-columns: 1fr; } }
+
+    .listing-title-main {
+      font-size: 22px;
+      font-weight: 700;
+      line-height: 1.4;
+      margin-bottom: 12px;
+    }
+
+    .listing-detail-meta {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
+
+    .listing-description {
+      font-size: 14px;
+      color: var(--text-secondary);
+      line-height: 1.8;
+      margin-bottom: 28px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius);
+      padding: 16px;
+    }
+
+    /* Comments */
+    .dm-comment {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius);
+      padding: 14px 16px;
+      margin-bottom: 10px;
+      position: relative;
+    }
+
+    .dm-comment-meta {
+      font-size: 11px;
+      font-family: var(--font-mono);
+      color: var(--text-muted);
+      margin-bottom: 8px;
+      display: flex;
+      gap: 8px;
+    }
+
+    .dm-comment-user { color: var(--accent-green); }
+
+    .dm-comment-content {
+      font-size: 13px;
+      color: var(--text-secondary);
+      line-height: 1.6;
+    }
+
+    /* XSS notice */
+    .xss-notice {
+      display: flex;
+      gap: 8px;
+      align-items: flex-start;
+      padding: 10px 12px;
+      background: rgba(255, 49, 49, 0.06);
+      border: 1px solid rgba(255, 49, 49, 0.15);
+      border-radius: var(--radius);
+      margin-bottom: 14px;
+      font-size: 11px;
+      font-family: var(--font-mono);
+      color: var(--text-muted);
+    }
+
+    .xss-notice .icon { color: var(--accent-red); flex-shrink: 0; }
+
+    /* Order card */
+    .order-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 24px;
+      position: sticky;
+      top: calc(var(--nav-height) + 20px);
+    }
+
+    .order-price {
+      font-family: var(--font-mono);
+      font-size: 32px;
+      font-weight: 900;
+      color: var(--accent-green);
+      text-shadow: 0 0 20px rgba(0,255,65,0.3);
+      margin-bottom: 4px;
+    }
+
+    .order-price-usd {
+      font-size: 12px;
+      color: var(--text-muted);
+      font-family: var(--font-mono);
+      margin-bottom: 20px;
+    }
+
+    .seller-card {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius);
+      padding: 12px 14px;
+      margin-bottom: 20px;
+    }
+
+    .seller-name {
+      font-family: var(--font-mono);
+      color: var(--accent-green);
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .seller-rating {
+      font-size: 11px;
+      color: var(--accent-amber);
+    }
+
+    #order-result {
+      margin-top: 12px;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      padding: 10px 12px;
+      border-radius: var(--radius);
+      display: none;
+    }
+
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      color: var(--text-muted);
+      text-decoration: none;
+      margin-bottom: 20px;
+      font-family: var(--font-mono);
+      transition: color var(--transition);
+    }
+
+    .back-link:hover { color: var(--accent-green); }
+
+    #comment-flag {
+      display: none;
+      margin-top: 10px;
+      padding: 10px 14px;
+      background: rgba(0,255,65,0.08);
+      border: 1px solid var(--accent-green);
+      border-radius: var(--radius);
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--accent-green);
+      word-break: break-all;
+    }
+  </style>
+</head>
+<body class="dm-body">
+
+  <nav class="dm-nav">
+    <a href="/market" class="dm-nav-brand">◈ DARKMARKET</a>
+    <div class="dm-nav-links">
+      <a href="/market" class="dm-nav-item">Market</a>
+      <a href="/my-orders" class="dm-nav-item">Orders</a>
+      <a href="/scoreboard" class="dm-nav-item">Scoreboard</a>
+      <a href="/dashboard" class="dm-nav-item">Dashboard</a>
+    </div>
+    <div class="dm-nav-actions">
+      <span class="dm-nav-user" id="nav-user">Loading...</span>
+      <button class="dm-hacker-btn" id="hacker-toggle">⚡ Hacker Mode</button>
+    </div>
+  </nav>
+
+  <main class="dm-main">
+    <div class="dm-container">
+      <a href="/market" class="back-link">← Back to Market</a>
+
+      <div class="listing-layout" id="listing-content">
+        <!-- Skeleton -->
+        <div>
+          <div class="dm-skeleton" style="height:32px;width:70%;margin-bottom:16px;border-radius:6px;"></div>
+          <div class="dm-skeleton" style="height:16px;width:40%;margin-bottom:24px;border-radius:4px;"></div>
+          <div class="dm-skeleton" style="height:120px;border-radius:8px;"></div>
+        </div>
+        <div class="dm-skeleton" style="height:280px;border-radius:14px;"></div>
+      </div>
+    </div>
+  </main>
+
+  <!-- HACKER PANEL -->
+  <div id="hacker-panel" class="hacker-panel hidden">
+    <div class="hacker-panel-header">
+      <span class="hacker-panel-title">DARKMARKET TERMINAL</span>
+      <button class="hacker-panel-close" onclick="closeHacker()">✕</button>
+    </div>
+    <div class="hacker-hints" id="hint-box">
+      <div class="hacker-hints-label">Page Hints</div>
+      <div id="hint-list"></div>
+    </div>
+    <div class="terminal-output" id="terminal-output"></div>
+    <div class="terminal-input-row">
+      <span class="terminal-prompt">dm@listing $&nbsp;</span>
+      <input class="terminal-input" id="terminal-input" type="text" placeholder="type 'help'..." autocomplete="off" spellcheck="false">
+    </div>
+  </div>
+
+  <script src="/assets/js/hacker-mode.js"></script>
+  <script src="/assets/js/terminal.js"></script>
+  <script>
+    const listingId = window.location.pathname.split('/').pop();
+
+    async function loadUser() {
+      try {
+        const res = await fetch('/auth/me');
+        const data = await res.json();
+        if (data.success) {
+          document.getElementById('nav-user').textContent = `// ${data.data.username}`;
+          window.currentUser = data.data;
+        } else {
+          window.location.href = '/login';
+        }
+      } catch { window.location.href = '/login'; }
+    }
+
+    async function loadListing() {
+      const res = await fetch('/listings/' + listingId);
+      if (!res.ok) { document.getElementById('listing-content').innerHTML = '<div class="dm-alert dm-alert-error">Listing not found.</div>'; return; }
+      const data = await res.json();
+      const l = data.data;
+
+      document.title = `${l.title} | DarkMarket`;
+
+      const DIFF = { easy:'🟢 Easy', medium:'🟡 Medium', hard:'🔴 Hard' };
+
+      document.getElementById('listing-content').innerHTML = `
+        <div>
+          <!-- Main Info -->
+          <div class="listing-title-main">${escHtml(l.title)}</div>
+          <div class="listing-detail-meta">
+            <span class="dm-listing-category ${l.category}">${l.category}</span>
+            <span class="dm-rating">★ ${l.rating.toFixed(1)}</span>
+            ${l.is_featured ? '<span class="dm-featured-badge">★ Featured</span>' : ''}
+          </div>
+          <div class="listing-description">${escHtml(l.description)}</div>
+
+          <!-- Comments -->
+          <div class="dm-section-title">Comments (${l.comments.length})</div>
+
+          <div class="xss-notice">
+            <span class="icon">⚠</span>
+            <span>Comments are rendered without sanitization. This is intentional for CTF Flag 3 (Stored XSS).</span>
+          </div>
+
+          <div id="comments-list">
+            ${l.comments.length === 0
+              ? '<div style="color:var(--text-muted);font-size:13px;font-family:var(--font-mono);padding:16px 0;">No comments yet. Be the first.</div>'
+              : l.comments.map(c => renderComment(c)).join('')
+            }
+          </div>
+
+          <!-- Post comment -->
+          <div class="dm-card" style="margin-top:20px;">
+            <div class="dm-section-title">Post a Comment</div>
+            <div class="dm-form-group">
+              <textarea class="dm-textarea" id="comment-content" placeholder="Write a review... or something else."></textarea>
+            </div>
+            <button class="dm-btn dm-btn-outline" onclick="postComment()">Post Comment</button>
+            <div id="comment-flag"></div>
+          </div>
+        </div>
+
+        <!-- Order Card -->
+        <div class="order-card">
+          <div class="order-price">₿ ${l.price_btc.toFixed(4)}</div>
+          <div class="order-price-usd">≈ $${(l.price_btc * 43000).toLocaleString()} USD</div>
+
+          <div class="seller-card">
+            <div class="dm-label" style="margin-bottom:6px;">Seller</div>
+            <div class="seller-name">@${escHtml(l.seller.username)}</div>
+            <div class="seller-rating">★ ${l.seller.rating || l.rating} reputation score</div>
+          </div>
+
+          <div class="dm-alert dm-alert-warning" style="font-size:12px;">
+            ⚡ Escrow recommended. All sales final.
+          </div>
+
+          <button class="dm-btn dm-btn-primary w-full" onclick="placeOrder(${l.id}, ${l.price_btc})">
+            Place Order
+          </button>
+          <div id="order-result"></div>
+        </div>
+      `;
+    }
+
+    function renderComment(c) {
+      return `<div class="dm-comment">
+        <div class="dm-comment-meta">
+          <span class="dm-comment-user">@${escHtml(c.username)}</span>
+          <span>·</span>
+          <span>${new Date(c.created_at).toLocaleDateString()}</span>
+        </div>
+        <div class="dm-comment-content">${c.content}</div>
+      </div>`;
+      // ⚠️ Note: c.content is rendered via innerHTML (done by browser when injected into DOM)
+      // The div's content is set as raw HTML — this is the XSS vector.
+    }
+
+    async function postComment() {
+      const content = document.getElementById('comment-content').value;
+      if (!content.trim()) return;
+
+      const res = await fetch(`/listings/${listingId}/comments`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content }),
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        document.getElementById('comment-content').value = '';
+        // Re-render comments (which will execute any XSS in innerHTML)
+        await reloadComments();
+      }
+    }
+
+    async function reloadComments() {
+      const res = await fetch('/listings/' + listingId);
+      const data = await res.json();
+      const commentsList = document.getElementById('comments-list');
+      if (commentsList) {
+        // ⚠️ INTENTIONALLY UNSAFE innerHTML — XSS vector (Flag 3)
+        commentsList.innerHTML = data.data.comments.map(c => renderComment(c)).join('');
+
+        // Actually inject via innerHTML to trigger XSS
+        data.data.comments.forEach((c, i) => {
+          const commentDivs = commentsList.querySelectorAll('.dm-comment-content');
+          if (commentDivs[i]) {
+            commentDivs[i].innerHTML = c.content; // ← XSS executes here
+          }
+        });
+      }
+    }
+
+    async function placeOrder(listingId, price) {
+      const res = await fetch('/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ listing_id: listingId, amount_btc: price }),
+      });
+      const data = await res.json();
+      const el = document.getElementById('order-result');
+      el.style.display = 'block';
+
+      if (data.success) {
+        el.style.background = 'rgba(0,255,65,0.08)';
+        el.style.border = '1px solid var(--border)';
+        el.style.color = 'var(--accent-green)';
+        el.textContent = `✓ Order #${data.data.id} placed. Awaiting escrow.`;
+      } else {
+        el.style.background = 'rgba(255,49,49,0.08)';
+        el.style.color = 'var(--accent-red)';
+        el.textContent = `✗ ${data.message}`;
+      }
+    }
+
+    function escHtml(str) {
+      if (!str) return '';
+      return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    loadUser().then(() => {
+      loadListing();
+      // Re-inject comments after page load for XSS
+      setTimeout(reloadComments, 500);
+    });
+
+    initHackerMode('listing');
+  </script>
+</body>
+</html>

@@ -1,0 +1,865 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Marketplace | DarkMarket</title>
+  <meta name="description" content="Browse the DarkMarket CTF marketplace — intentionally vulnerable listings for security training.">
+  <link rel="stylesheet" href="/assets/css/dark-theme.css">
+  <link rel="stylesheet" href="/assets/css/terminal.css">
+  <style>
+    .market-layout {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 32px;
+    }
+
+    .market-filters {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      padding: 16px 20px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      margin-bottom: 24px;
+    }
+
+    .filter-label {
+      font-size: 11px;
+      font-weight: 700;
+      font-family: var(--font-mono);
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      white-space: nowrap;
+    }
+
+    .filter-sep { width: 1px; height: 20px; background: var(--border); }
+
+    .filter-btn {
+      padding: 5px 14px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--text-secondary);
+      transition: all var(--transition);
+      font-family: var(--font-ui);
+    }
+
+    .filter-btn:hover,
+    .filter-btn.active {
+      border-color: var(--accent-green);
+      color: var(--accent-green);
+      background: var(--accent-green-glow);
+    }
+
+    .search-wrap {
+      margin-left: auto;
+      position: relative;
+    }
+
+    #market-search {
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text-primary);
+      font-family: var(--font-mono);
+      font-size: 13px;
+      padding: 7px 14px 7px 36px;
+      outline: none;
+      width: 220px;
+      transition: all var(--transition);
+    }
+
+    #market-search:focus {
+      border-color: var(--accent-green);
+      box-shadow: 0 0 0 3px rgba(0,255,65,0.1);
+      width: 280px;
+    }
+
+    .search-icon {
+      position: absolute;
+      left: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-muted);
+      font-size: 14px;
+    }
+
+    /* Listings Grid */
+    .listings-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 16px;
+    }
+
+    .dm-card.listing-item {
+      cursor: pointer;
+      text-decoration: none;
+      display: block;
+      color: inherit;
+    }
+
+    .listing-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+
+    .listing-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-primary);
+      line-height: 1.4;
+      flex: 1;
+    }
+
+    .listing-desc {
+      font-size: 12px;
+      color: var(--text-muted);
+      line-height: 1.6;
+      margin: 10px 0;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .listing-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 14px;
+      padding-top: 12px;
+      border-top: 1px solid var(--border-subtle);
+    }
+
+    .listing-seller {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .listing-seller span {
+      color: var(--accent-green);
+    }
+
+    .listing-stats {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 11px;
+      font-family: var(--font-mono);
+    }
+
+    /* Level stepper */
+    .level-stepper {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+
+    .level-item {
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+      position: relative;
+    }
+
+    /* Connector line between levels */
+    .level-item:not(:last-child)::after {
+      content: '';
+      position: absolute;
+      left: 15px;
+      top: 32px;
+      bottom: -8px;
+      width: 2px;
+      background: var(--border);
+      z-index: 0;
+    }
+
+    .level-item.captured:not(:last-child)::after {
+      background: var(--accent-green);
+    }
+
+    .level-num {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      border: 2px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 700;
+      flex-shrink: 0;
+      color: var(--text-muted);
+      background: var(--bg-secondary);
+      position: relative;
+      z-index: 1;
+      transition: all 0.3s;
+    }
+
+    .level-item.captured .level-num {
+      background: var(--accent-green);
+      border-color: var(--accent-green);
+      color: #000;
+    }
+
+    .level-item.active-level .level-num {
+      border-color: var(--accent-amber);
+      color: var(--accent-amber);
+      box-shadow: 0 0 10px rgba(255,176,0,0.3);
+    }
+
+    .level-item.locked-level .level-num {
+      opacity: 0.4;
+    }
+
+    .level-body {
+      flex: 1;
+      padding: 4px 0 16px 0;
+    }
+
+    .level-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .level-item.captured .level-title { color: var(--accent-green); }
+    .level-item.locked-level .level-title { color: var(--text-dim); }
+
+    .level-meta {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      margin-top: 3px;
+    }
+
+    .level-pts {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .level-lock {
+      font-size: 10px;
+      font-family: var(--font-mono);
+      color: var(--text-dim);
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      padding: 1px 6px;
+      border-radius: 4px;
+    }
+
+    .level-captured-tag {
+      font-size: 10px;
+      font-family: var(--font-mono);
+      color: var(--accent-green);
+      background: rgba(0,255,65,0.08);
+      border: 1px solid var(--border);
+      padding: 1px 6px;
+      border-radius: 4px;
+    }
+
+    .level-next-tag {
+      font-size: 10px;
+      font-family: var(--font-mono);
+      color: var(--accent-amber);
+      background: rgba(255,176,0,0.08);
+      border: 1px solid rgba(255,176,0,0.2);
+      padding: 1px 6px;
+      border-radius: 4px;
+      animation: pulse-tag 1.5s ease-in-out infinite;
+    }
+
+    @keyframes pulse-tag {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0.5; }
+    }
+
+    .flag-pts {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+
+    /* Progress bar */
+    .progress-wrap {
+      margin-bottom: 16px;
+    }
+
+    .progress-bar-bg {
+      height: 4px;
+      background: var(--border);
+      border-radius: 2px;
+      overflow: hidden;
+      margin-top: 6px;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      background: var(--accent-green);
+      border-radius: 2px;
+      transition: width 1s ease;
+      box-shadow: 0 0 8px rgba(0,255,65,0.5);
+    }
+
+    .progress-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      font-family: var(--font-mono);
+      color: var(--text-muted);
+    }
+
+    .market-grid-layout {
+      display: grid;
+      grid-template-columns: 1fr 300px;
+      gap: 24px;
+      align-items: start;
+    }
+
+    @media (max-width: 1024px) {
+      .market-grid-layout { grid-template-columns: 1fr; }
+    }
+
+    .sort-select {
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text-secondary);
+      font-family: var(--font-mono);
+      font-size: 12px;
+      padding: 5px 10px;
+      outline: none;
+      cursor: pointer;
+    }
+
+    .sort-select:focus { border-color: var(--accent-green); }
+
+    #listings-count {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--text-muted);
+    }
+
+    .empty-state-icon { font-size: 40px; margin-bottom: 12px; opacity: 0.5; }
+    .empty-state-text { font-family: var(--font-mono); font-size: 13px; }
+
+    /* Inline level hint block */
+    .level-hint-block {
+      margin-top: 10px;
+      padding: 10px 12px;
+      border-radius: 6px;
+      border-left: 2px solid var(--border);
+      background: var(--bg-secondary);
+    }
+
+    .hint-active {
+      border-left-color: var(--accent-amber);
+      background: rgba(255,176,0,0.04);
+    }
+
+    .hint-done {
+      border-left-color: var(--accent-green);
+      background: rgba(0,255,65,0.03);
+      opacity: 0.7;
+    }
+
+    .level-hint-title {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+
+    .hint-active .level-hint-title { color: var(--accent-amber); }
+    .hint-done  .level-hint-title  { color: var(--accent-green); }
+
+    .level-hint-step {
+      display: flex;
+      gap: 8px;
+      align-items: flex-start;
+      font-size: 11px;
+      font-family: var(--font-mono);
+      color: var(--text-secondary);
+      line-height: 1.6;
+      margin-bottom: 4px;
+    }
+
+    .level-hint-step:last-child { margin-bottom: 0; }
+
+    .level-hint-num {
+      flex-shrink: 0;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--border);
+      color: var(--text-muted);
+      font-size: 9px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-top: 2px;
+    }
+
+    .hint-active .level-hint-num { background: rgba(255,176,0,0.2); color: var(--accent-amber); }
+    .hint-done  .level-hint-num  { background: rgba(0,255,65,0.15); color: var(--accent-green); }
+
+    .level-hint-step code {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      padding: 1px 4px;
+      font-size: 10px;
+      color: var(--accent-amber);
+      word-break: break-all;
+    }
+
+    .level-hint-step a { color: var(--accent-green); text-decoration: none; }
+    .level-hint-step a:hover { text-decoration: underline; }
+
+    /* Inline submit box — injected between active level and locked levels */
+    .submit-inline {
+      margin: 4px 0 16px 44px;   /* aligns with level-body (32px num + 12px gap) */
+      padding: 12px 14px;
+      background: rgba(0,255,65,0.04);
+      border: 1px solid rgba(0,255,65,0.2);
+      border-radius: 8px;
+    }
+
+    .submit-inline-label {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--accent-green);
+      margin-bottom: 8px;
+    }
+  </style>
+</head>
+<body class="dm-body">
+
+  <!-- NAV -->
+  <nav class="dm-nav">
+    <a href="/market" class="dm-nav-brand">◈ DARKMARKET</a>
+    <div class="dm-nav-links">
+      <a href="/market" class="dm-nav-item active">Market</a>
+      <a href="/my-orders" class="dm-nav-item">Orders</a>
+      <a href="/scoreboard" class="dm-nav-item">Scoreboard</a>
+      <a href="/dashboard" class="dm-nav-item">Dashboard</a>
+    </div>
+    <div class="dm-nav-actions">
+      <span class="dm-nav-user" id="nav-user">Loading...</span>
+      <button class="dm-hacker-btn" id="hacker-toggle">⚡ Hacker Mode</button>
+      <button class="dm-btn dm-btn-outline dm-btn-sm" onclick="doLogout()">Logout</button>
+    </div>
+  </nav>
+
+  <!-- MAIN -->
+  <main class="dm-main">
+    <div class="dm-container">
+
+      <!-- Page Header -->
+      <div class="dm-page-header">
+        <h1 class="dm-page-title">◈ The <span>Market</span></h1>
+        <p class="dm-page-subtitle">// Browse listings — exploit vulnerabilities — capture flags</p>
+      </div>
+
+      <!-- Stats -->
+      <div class="dm-stats-grid" id="market-stats">
+        <div class="dm-stat"><div class="dm-stat-value" id="stat-listings">—</div><div class="dm-stat-label">Listings</div></div>
+        <div class="dm-stat"><div class="dm-stat-value" id="stat-flags">0/6</div><div class="dm-stat-label">Flags Captured</div></div>
+        <div class="dm-stat"><div class="dm-stat-value" id="stat-points">0</div><div class="dm-stat-label">Points</div></div>
+        <div class="dm-stat"><div class="dm-stat-value" id="stat-rank">—</div><div class="dm-stat-label">Rank</div></div>
+      </div>
+
+      <div class="market-grid-layout">
+        <!-- LEFT: Listings -->
+        <div>
+          <!-- Filters -->
+          <div class="market-filters">
+            <span class="filter-label">Filter:</span>
+            <button class="filter-btn active" data-cat="" onclick="setCategory(this, '')">All</button>
+            <button class="filter-btn" data-cat="data"     onclick="setCategory(this, 'data')">Data</button>
+            <button class="filter-btn" data-cat="exploits" onclick="setCategory(this, 'exploits')">Exploits</button>
+            <button class="filter-btn" data-cat="tools"    onclick="setCategory(this, 'tools')">Tools</button>
+            <button class="filter-btn" data-cat="access"   onclick="setCategory(this, 'access')">Access</button>
+
+            <div class="filter-sep"></div>
+
+            <select class="sort-select" id="sort-select" onchange="loadListings()">
+              <option value="">Sort: Default</option>
+              <option value="price_asc">Price: Low→High</option>
+              <option value="price_desc">Price: High→Low</option>
+              <option value="rating">Top Rated</option>
+            </select>
+
+            <div class="search-wrap">
+              <span class="search-icon">🔍</span>
+              <input type="text" id="market-search" placeholder="Search listings..." oninput="loadListings()">
+            </div>
+          </div>
+
+          <!-- Count -->
+          <div style="margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;">
+            <span id="listings-count"></span>
+          </div>
+
+          <!-- Grid -->
+          <div class="listings-grid" id="listings-grid">
+            <!-- Skeletons -->
+            <div class="dm-card" style="height:180px;"><div class="dm-skeleton" style="height:100%;border-radius:8px;"></div></div>
+            <div class="dm-card" style="height:180px;"><div class="dm-skeleton" style="height:100%;border-radius:8px;"></div></div>
+            <div class="dm-card" style="height:180px;"><div class="dm-skeleton" style="height:100%;border-radius:8px;"></div></div>
+          </div>
+        </div>
+
+          <!-- Flags Panel - Level Progression -->
+          <div class="dm-card">
+            <div class="dm-section-title">CTF Levels</div>
+
+            <div class="progress-wrap">
+              <div class="progress-label">
+                <span id="progress-text">0 / 6 flags</span>
+                <span id="progress-pts">0 pts</span>
+              </div>
+              <div class="progress-bar-bg">
+                <div class="progress-bar-fill" id="progress-fill" style="width:0%"></div>
+              </div>
+            </div>
+
+            <div class="level-stepper" id="flags-list">
+              <!-- Populated by loadFlags() -->
+              <div class="dm-skeleton" style="height:48px;margin-bottom:12px;border-radius:8px;"></div>
+              <div class="dm-skeleton" style="height:48px;margin-bottom:12px;border-radius:8px;"></div>
+              <div class="dm-skeleton" style="height:48px;border-radius:8px;"></div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- HACKER PANEL -->
+  <div id="hacker-panel" class="hacker-panel hidden">
+    <div class="hacker-panel-header">
+      <span class="hacker-panel-title">DARKMARKET TERMINAL</span>
+      <button class="hacker-panel-close" onclick="closeHacker()">✕</button>
+    </div>
+    <div class="hacker-hints" id="hint-box">
+      <div class="hacker-hints-label">Page Hints</div>
+      <div id="hint-list"></div>
+    </div>
+    <div class="terminal-output" id="terminal-output"></div>
+    <div class="terminal-input-row">
+      <span class="terminal-prompt">dm@market $&nbsp;</span>
+      <input class="terminal-input" id="terminal-input" type="text" placeholder="type 'help'..." autocomplete="off" spellcheck="false">
+    </div>
+  </div>
+
+  <script src="/assets/js/hacker-mode.js"></script>
+  <script src="/assets/js/terminal.js"></script>
+  <script>
+    let activeCategory = '';
+
+    // Load user info
+    async function loadUser() {
+      try {
+        const res = await fetch('/auth/me');
+        const data = await res.json();
+        if (data.success) {
+          document.getElementById('nav-user').textContent = `// ${data.data.username}`;
+          window.currentUser = data.data;
+        } else {
+          window.location.href = '/login';
+        }
+      } catch { window.location.href = '/login'; }
+    }
+
+    // Load listings
+    async function loadListings() {
+      const cat    = activeCategory;
+      const sort   = document.getElementById('sort-select').value;
+      const search = document.getElementById('market-search').value.trim();
+
+      const params = new URLSearchParams();
+      if (cat)    params.set('category', cat);
+      if (sort)   params.set('sort', sort);
+      if (search) params.set('search', search);
+
+      const res  = await fetch('/listings?' + params.toString());
+      const data = await res.json();
+
+      document.getElementById('stat-listings').textContent = data.data.length;
+      document.getElementById('listings-count').textContent = `${data.data.length} listing${data.data.length !== 1 ? 's' : ''}`;
+
+      const grid = document.getElementById('listings-grid');
+      if (!data.data.length) {
+        grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="empty-state-icon">🔍</div><div class="empty-state-text">No listings found.</div></div>`;
+        return;
+      }
+
+      grid.innerHTML = data.data.map(l => `
+        <a href="/listing/${l.id}" class="dm-card listing-item">
+          <div class="listing-header">
+            <div>
+              ${l.is_featured ? '<span class="dm-featured-badge">★ Featured</span>' : ''}
+              <div class="listing-title" style="margin-top:${l.is_featured?'6px':'0'}">${escHtml(l.title)}</div>
+            </div>
+            <span class="dm-listing-category ${l.category}">${l.category}</span>
+          </div>
+          <div class="listing-desc">${escHtml(l.description)}</div>
+          <div class="listing-meta">
+            <div>
+              <div class="dm-listing-price">₿ ${l.price_btc.toFixed(4)}</div>
+              <div class="listing-seller">by <span>@${escHtml(l.seller.username)}</span></div>
+            </div>
+            <div class="listing-stats">
+              <span class="dm-rating">★ ${l.rating.toFixed(1)}</span>
+            </div>
+          </div>
+        </a>
+      `).join('');
+    }
+
+    function setCategory(btn, cat) {
+      activeCategory = cat;
+      document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      loadListings();
+    }
+
+    // Per-level attack hints shown inline under each level item
+    const LEVEL_HINTS = {
+      1: {
+        label: 'SQL Injection',
+        steps: [
+          'Go to the <a href="/login" style="color:var(--accent-green)">Login page</a>',
+          'In the username field type: <code>' + "' OR 1=1 --" + '</code>',
+          'Use any password and click <b>Access Market</b>',
+          'Flag appears in the response banner'
+        ]
+      },
+      2: {
+        label: 'Broken JWT Auth',
+        steps: [
+          'From Path Traversal you found <code>JWT_SECRET=supersecret</code>',
+          'Forge a token: <code>node -e "console.log(require(\'jsonwebtoken\').sign({id:1,role:\'admin\'},\'supersecret\'))"</code>',
+          'Open <a href="/dashboard" style="color:var(--accent-green)">/dashboard</a> and paste the token in the JWT field',
+          'Flag is returned in the admin panel response'
+        ]
+      },
+      3: {
+        label: 'Stored XSS',
+        steps: [
+          'Open any <a href="/listing/1" style="color:var(--accent-green)">listing detail page</a>',
+          'In the comment box paste: <code>&lt;script&gt;fetch(\'/flags/xss-beacon\').then(r=&gt;r.json()).then(d=&gt;alert(d.flag))&lt;/script&gt;</code>',
+          'Click <b>Post Comment</b>',
+          'The script executes on page reload — flag pops in an alert'
+        ]
+      },
+      4: {
+        label: 'IDOR',
+        steps: [
+          'Log in as any buyer (e.g. ghost99 / pass1234)',
+          'Visit <a href="/orders/1" style="color:var(--accent-green)">/orders/1</a> then /orders/2 … /orders/20',
+          'You can read any order regardless of ownership',
+          'The flag is hidden in one of the <code>secret_note</code> fields'
+        ]
+      },
+      5: {
+        label: 'Path Traversal',
+        steps: [
+          'The file server at <code>/files?file=</code> has no path check',
+          'Request: <a href="/files?file=../../.env" style="color:var(--accent-green)">/files?file=../../.env</a>',
+          'The raw <code>.env</code> file is returned including the flag',
+          'Also try <code>/files?file=../../server/db/schema.sql</code>'
+        ]
+      },
+      6: {
+        label: 'SSRF',
+        steps: [
+          'Open browser DevTools console (F12)',
+          'Run: <code>fetch(\'/fetch-preview\',{method:\'POST\',headers:{\'Content-Type\':\'application/json\'},body:JSON.stringify({url:\'http://localhost:3000/admin\'})}).then(r=>r.json()).then(console.log)</code>',
+          'The server fetches the internal URL on your behalf',
+          'Flag is returned in the JSON <code>flag</code> field'
+        ]
+      }
+    };
+
+    // Load flags — renders level-gated stepper with inline hints
+    async function loadFlags() {
+      const res  = await fetch('/flags');
+      const data = await res.json();
+      if (!data.success) return;
+
+      const flags    = data.data;   // already ordered by level ASC from server
+      const captured = flags.filter(f => f.captured).length;
+      const points   = flags.filter(f => f.captured).reduce((s, f) => s + f.points, 0);
+      const pct      = Math.round((captured / flags.length) * 100);
+
+      document.getElementById('stat-flags').textContent    = `${captured}/${flags.length}`;
+      document.getElementById('stat-points').textContent   = points;
+      document.getElementById('progress-text').textContent = `${captured} / ${flags.length} flags`;
+      document.getElementById('progress-pts').textContent  = `${points} pts`;
+      document.getElementById('progress-fill').style.width = `${pct}%`;
+
+      const DIFF_ICONS = { easy: '🟢', medium: '🟡', hard: '🔴' };
+
+      // The "next" flag = first not captured and not locked
+      const nextFlag = flags.find(f => !f.captured && !f.locked);
+
+      // The "submit flag" block — injected between active level and first locked level
+      const SUBMIT_HTML = `
+        <div class="submit-inline" id="submit-inline-block">
+          <div class="submit-inline-label">Got the flag?</div>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <input class="dm-input" type="text" id="flag-input"
+              placeholder="DMS{...}"
+              style="font-family:var(--font-mono);font-size:12px;flex:1;"
+              onkeydown="if(event.key==='Enter')submitFlag()">
+            <button class="dm-btn dm-btn-primary dm-btn-sm" onclick="submitFlag()">Submit</button>
+          </div>
+          <div id="flag-submit-result" style="margin-top:8px;font-family:var(--font-mono);font-size:11px;display:none;"></div>
+        </div>
+      `;
+
+      // Build items array, splicing in the submit box after the active level
+      const items = [];
+      let submitInserted = false;
+
+      for (const f of flags) {
+        let stateClass = '';
+        let badge      = '';
+        let numContent = f.level;
+        const hint     = LEVEL_HINTS[f.level];
+
+        if (f.captured) {
+          stateClass = 'captured';
+          numContent = '✓';
+          badge = '<span class="level-captured-tag">done</span>';
+        } else if (f.locked) {
+          stateClass = 'locked-level';
+          badge = '<span class="level-lock">🔒 locked</span>';
+        } else if (f === nextFlag) {
+          stateClass = 'active-level';
+          badge = '<span class="level-next-tag">▶ current</span>';
+        }
+
+        // Build hint block for unlocked levels
+        let hintBlock = '';
+        if (hint && !f.locked) {
+          const stepsHtml = hint.steps.map((s, i) =>
+            `<div class="level-hint-step"><span class="level-hint-num">${i + 1}</span><span>${s}</span></div>`
+          ).join('');
+          hintBlock = `
+            <div class="level-hint-block ${f.captured ? 'hint-done' : 'hint-active'}">
+              <div class="level-hint-title">${f.captured ? '✓ How you solved it' : '// How to attack'}</div>
+              ${stepsHtml}
+            </div>`;
+        }
+
+        items.push(`
+          <div class="level-item ${stateClass}">
+            <div class="level-num">${numContent}</div>
+            <div class="level-body">
+              <div class="level-title">${DIFF_ICONS[f.difficulty]} ${escHtml(f.vulnerability)}</div>
+              <div class="level-meta">
+                <span class="level-pts">${f.points} pts</span>
+                ${badge}
+              </div>
+              ${hintBlock}
+            </div>
+          </div>`);
+
+        // Inject submit box right after the active (current) level
+        if (f === nextFlag && !submitInserted) {
+          items.push(SUBMIT_HTML);
+          submitInserted = true;
+        }
+      }
+
+      // If all levels captured, show submit at the bottom (edge case)
+      if (!submitInserted) items.push(SUBMIT_HTML);
+
+      document.getElementById('flags-list').innerHTML = items.join('');
+
+      // Load scoreboard rank
+      const scoreRes  = await fetch('/score');
+      const scoreData = await scoreRes.json();
+      if (scoreData.success && window.currentUser) {
+        const me = scoreData.data.find(r => r.username === window.currentUser.username);
+        document.getElementById('stat-rank').textContent = me ? `#${me.rank}` : '—';
+      }
+    }
+
+    async function submitFlag() {
+      const token = document.getElementById('flag-input').value.trim();
+      const resultEl = document.getElementById('flag-submit-result');
+      if (!token) return;
+
+      const res  = await fetch('/flags/submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token }),
+      });
+      const data = await res.json();
+
+      resultEl.style.display = 'block';
+      if (data.success) {
+        resultEl.style.color = 'var(--accent-green)';
+        resultEl.textContent = `✓ ${data.message}`;
+        loadFlags();
+      } else {
+        resultEl.style.color = 'var(--accent-red)';
+        resultEl.textContent = `✗ ${data.message}`;
+      }
+      setTimeout(() => { resultEl.style.display = 'none'; }, 4000);
+    }
+
+    async function doLogout() {
+      await fetch('/auth/logout', { method: 'POST' });
+      window.location.href = '/login';
+    }
+
+    function escHtml(str) {
+      if (!str) return '';
+      return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    loadUser().then(() => {
+      loadListings();
+      loadFlags();
+    });
+
+    initHackerMode('market');
+  </script>
+</body>
+</html>
