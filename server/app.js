@@ -95,6 +95,7 @@ app.get('/dashboard',  (req, res) => res.sendFile(path.join(pagesDir, 'dashboard
 // /orders page must come AFTER the API route since orderRoutes handles GET /
 // The orders HTML page is served at /my-orders to avoid conflict with /orders API
 app.get('/my-orders',  (req, res) => res.sendFile(path.join(pagesDir, 'orders.html')));
+app.get('/attack-map', (req, res) => res.sendFile(path.join(pagesDir, 'attack-map.html')));
 
 // ── Centralized Error Handler ─────────────────────────────────────────────────
 app.use((err, req, res, _next) => {

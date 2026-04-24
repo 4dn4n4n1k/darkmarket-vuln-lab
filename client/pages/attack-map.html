@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cyber Attack Map | DarkMarket</title>
+  <meta name="description" content="DarkMarket dynamic cyber attack map.">
+  <link rel="stylesheet" href="/assets/css/dark-theme.css">
+  <script src="//unpkg.com/globe.gl"></script>
+  <style>
+    body,
+    html {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      background: #000;
+      overflow: hidden;
+      font-family: var(--font-mono);
+    }
+
+    #globe-container {
+      width: 100%;
+      height: 100%;
+    }
+
+    .map-overlay {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      z-index: 10;
+      background: rgba(0, 0, 0, 0.7);
+      border: 1px solid var(--accent-green);
+      padding: 20px;
+      border-radius: 8px;
+      color: var(--text-primary);
+      width: 300px;
+    }
+
+    .map-header {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--accent-green);
+      margin-bottom: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 10px;
+    }
+
+    .attack-feed {
+      max-height: 300px;
+      overflow-y: auto;
+      font-size: 11px;
+    }
+
+    .attack-item {
+      margin-bottom: 8px;
+      border-left: 2px solid var(--accent-amber);
+      padding-left: 8px;
+    }
+
+    .attack-item .ip {
+      color: var(--accent-blue);
+    }
+
+    .attack-item .endpoint {
+      color: var(--accent-green);
+    }
+
+    .attack-item .pattern {
+      color: var(--accent-red);
+      font-weight: bold;
+    }
+
+    .back-btn {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      z-index: 10;
+    }
+
+    /* Scrollbar for feed */
+    .attack-feed::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    .attack-feed::-webkit-scrollbar-thumb {
+      background: var(--accent-green);
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="map-overlay">
+    <div class="map-header">LIVE ATTACK FEED</div>
+    <div class="attack-feed" id="attack-feed">
+      <div style="color:var(--text-muted)">Initializing neural link...</div>
+    </div>
+  </div>
+
+  <button class="dm-btn dm-btn-outline back-btn" onclick="window.location.href='/dashboard'">Exit Map</button>
+
+  <div id="globe-container"></div>
+
+  <script>
+    // Initialize Globe
+    const globe = Globe()
+      (document.getElementById('globe-container'))
+      .globeImageUrl('//unpkg.com/three-globe/example/img/earth-dark.jpg')
+      .bumpImageUrl('//unpkg.com/three-globe/example/img/earth-topology.png')
+      .backgroundColor('#000000')
+      .arcColor('color')
+      .arcDashLength(0.4)
+      .arcDashGap(0.2)
+      .arcDashAnimateTime(1500)
+      .arcsTransitionDuration(0)
+      .pointColor('color')
+      .pointAltitude(0.01)
+      .pointRadius(0.5);
+
+    // Set initial camera view
+    globe.pointOfView({ lat: 20, lng: 0, altitude: 2.5 });
+
+    // Target server coordinates (e.g., somewhere in Europe or US)
+    const TARGET_LAT = 38.9072;
+    const TARGET_LNG = -77.0369;
+
+    const COLORS = {
+      sqli: '#ff3131',
+      xss: '#ffb000',
+      traversal: '#8b5cf6',
+      ssrf: '#0080ff',
+      jwt: '#00ff41',
+      default: '#ffffff'
+    };
+
+    let adminToken = localStorage.getItem('dm_token');
+
+    async function fetchLogs() {
+      if (!adminToken) return [];
+      try {
+        const res = await fetch('/admin/logs?limit=20', {
+          headers: { 'Authorization': 'Bearer ' + adminToken }
+        });
+        const data = await res.json();
+        return data.success ? data.data : [];
+      } catch (err) {
+        console.error(err);
+        return [];
+      }
+    }
+
+    function addAttackToFeed(log) {
+      const feed = document.getElementById('attack-feed');
+      const item = document.createElement('div');
+      item.className = 'attack-item';
+
+      const pattern = log.pattern_matched || 'unknown';
+      const color = COLORS[pattern] || COLORS.default;
+      item.style.borderLeftColor = color;
+
+      item.innerHTML = `
+        <div style="color: var(--text-dim); margin-bottom: 2px;">${new Date(log.timestamp).toLocaleTimeString()}</div>
+        <div>SRC: <span class="ip">${log.ip_address || 'Unknown'}</span></div>
+        <div>TGT: <span class="endpoint">${log.endpoint}</span></div>
+        <div>TYPE: <span class="pattern" style="color:${color}">${pattern.toUpperCase()}</span></div>
+      `;
+
+      feed.prepend(item);
+      if (feed.children.length > 50) {
+        feed.removeChild(feed.lastChild);
+      }
+    }
+
+    function generateRandomLocation() {
+      // Random coordinates, keeping mostly away from poles
+      return {
+        lat: (Math.random() - 0.5) * 140,
+        lng: (Math.random() - 0.5) * 360
+      };
+    }
+
+    async function simulateAttacks() {
+      const logs = await fetchLogs();
+      const arcs = [];
+      const points = [{ lat: TARGET_LAT, lng: TARGET_LNG, color: '#00ff41', size: 1 }]; // The server
+
+      document.getElementById('attack-feed').innerHTML = ''; // clear loading
+
+      if (logs.length === 0) {
+        document.getElementById('attack-feed').innerHTML = '<div style="color:var(--text-muted)">No attack data detected yet.</div>';
+      }
+
+      // Replay the recent logs slowly for effect
+      logs.reverse().forEach((log, i) => {
+        setTimeout(() => {
+          const origin = generateRandomLocation();
+          const pattern = log.pattern_matched || 'default';
+          const color = COLORS[pattern] || COLORS.default;
+
+          arcs.push({
+            startLat: origin.lat,
+            startLng: origin.lng,
+            endLat: TARGET_LAT,
+            endLng: TARGET_LNG,
+            color: [color, color]
+          });
+
+          points.push({ lat: origin.lat, lng: origin.lng, color: color, size: 0.5 });
+
+          // Update globe
+          globe.arcsData([...arcs]).pointsData([...points]);
+
+          // Add to feed
+          addAttackToFeed(log);
+        }, i * 800); // 800ms delay between each historical attack
+      });
+
+      // Setup random active simulation if requested, to make it look alive even with few logs
+      setInterval(() => {
+        if (Math.random() > 0.7) { // 30% chance every 2 seconds to fire a random generic ping
+          const origin = generateRandomLocation();
+          arcs.push({
+            startLat: origin.lat,
+            startLng: origin.lng,
+            endLat: TARGET_LAT,
+            endLng: TARGET_LNG,
+            color: ['rgba(255,255,255,0.2)', 'rgba(255,255,255,0.5)']
+          });
+          // Keep arc array from growing indefinitely
+          if (arcs.length > 100) arcs.shift();
+          globe.arcsData([...arcs]);
+        }
+      }, 2000);
+    }
+
+    // Auto-rotate globe
+    globe.controls().autoRotate = true;
+    globe.controls().autoRotateSpeed = 1.0;
+
+    if (!adminToken) {
+      document.getElementById('attack-feed').innerHTML = '<div style="color:var(--accent-red)">ERR: UNATHORIZED ACCESS.<br>JWT TOKEN REQUIRED.</div>';
+    } else {
+      simulateAttacks();
+    }
+
+  </script>
+</body>
+
+</html>
